@@ -361,7 +361,7 @@ def plot_vehicule_evolution(df, model, region=None, departement=None, commune=No
 
     # df['proportion2'] = df.groupby('crit_air')['nombre de véhicules'].sum()
     # df['proportion'] = df['nombre de véhicules'] / df.groupby(['commune_de_residence', 'crit_air'])['nombre de véhicules'].transform('sum') * 100
-    df.to_csv(p + r'/France_data/df_proportion.csv',encoding="utf-8")
+    # df.to_csv(p + r'/France_data/df_proportion.csv',encoding="utf-8")
     print (df)
 
     # Sort df by Crit'Air category
