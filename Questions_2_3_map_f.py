@@ -24,23 +24,13 @@ df_propre[['lattitude', 'longitude']
 df_propre[['lattitude', 'longitude']] = df_propre[[
     'lattitude', 'longitude']].astype(float)
 
-# # Define colors for each Crit'Air category
-# colors = {"Crit'Air E": 'green', "Crit'Air 1": 'purple', "Crit'Air 2": 'yellow', "Crit'Air 3": 'orange',
-#         "Crit'Air 4": 'maroon', "Crit'Air 5": 'gray', "Inconnu": 'black', "Non classé": 'brown'}
-# # Add color column based on Crit'Air category
-# df_propre['couleur'] = [colors[x] for x in df_propre['crit_air']]
-
-# print (df_propre)
-
-
 def carto(df,model):
     # init google map
-    # apikey = 'AIzaSyD1p5gcCvLbVqhuqtdMsg_1laPEDAOoXXQ'
     lat0 = df.iloc[0]['lattitude']
     lon0 = df.iloc[0]['longitude']
     
     # instanciation objets
-    gmap = gmplot.GoogleMapPlotter(lat0, lon0, 13)#, apikey=apikey)
+    gmap = gmplot.GoogleMapPlotter(lat0, lon0, 13)
 
     m = folium.Map(location=[lat0, lon0], zoom_start=15)
 
@@ -349,11 +339,6 @@ def plot_vehicule_evolution(df, model, region=None, departement=None, commune=No
     
 
     # Calculate percentage of vehicles in each category
-    # df0 = df.groupby('crit_air')['nombre de véhicules'].sum()
-    # df0['proportion'] = df0.groupby(['crit_air'])['nombre de véhicules'].apply(lambda x: x / x.sum() * 100)
-    # df0.name = 'ma_serie'
-    # df0.to_frame("toto")
-    
     df['proportion'] = df.groupby('commune_de_residence')['nombre de véhicules'].apply(lambda x: x / x.sum() * 100)
     
     # df2.to_csv(p + r'/France_data/df_proportion2.csv',encoding="utf-8")
