@@ -24,10 +24,11 @@ df_propre[['lattitude', 'longitude']
 df_propre[['lattitude', 'longitude']] = df_propre[[
     'lattitude', 'longitude']].astype(float)
 
-def carto(df_commune,model):
+def carto(df_commune,model,Annees_list):
     # init google map
     lat0 = df_commune.iloc[0]['lattitude']
     lon0 = df_commune.iloc[0]['longitude']
+    Annee = Annees_list[0]
     
     # instanciation objets
     gmap = gmplot.GoogleMapPlotter(lat0, lon0, 13)
@@ -37,7 +38,7 @@ def carto(df_commune,model):
     for commune in df_commune['commune_de_residence'].unique():
         df_commune_unique = df_commune[df_commune['commune_de_residence'] == commune]
         # df_commune_unique = df_commune[df_commune['commune_de_residence'].isin(commune)]
-        print ('for commune',df_commune)
+        # print ('for commune',df_commune)
         lat0 = df_commune_unique.iloc[0]['lattitude']
         lon0 = df_commune_unique.iloc[0]['longitude']
         shape_commune = df_commune_unique.iloc[0]['geo_shape']
@@ -68,11 +69,10 @@ def carto(df_commune,model):
         # Create an "explode" array with a non-zero value for the largest percentage
         explode = [0.1 if i == explode_index else 0 for i in range(len(df_commune_unique))]
 
-        # print (df_commune_unique['couleur'])
-
         plt.pie(df_commune_unique['proportion'], labels=df_commune_unique[model],autopct='%1.1f%%',
                 colors=df_commune_unique['couleur'], explode=explode)
-        plt.title(commune)
+        plt.title(commune+' / '+Annee)
+        
 
         # Save the plot to a BytesIO object
         img = BytesIO()
@@ -87,18 +87,28 @@ def carto(df_commune,model):
  
         # Add a marker for each location in the df_communeFrame
         gmap.marker(lat0, lon0, info_window=html)
+        
+        # instance objet marker_cluster pour folium
         marker_cluster = MarkerCluster().add_to(m)
+        
         # Create a folium Popup object containing the HTML img tag
         popup = folium.Popup(html, max_width=2650)
+        # popup2 = folium.Popup(html, max_width=2650)
         location = lat0,lon0
         # Add a marker to the map with the popup
         folium.Marker(location=location, popup=popup).add_to(marker_cluster)
+        # folium.Marker(location=location, popup=popup2).add_to(marker_cluster)
+        plt.cla() # clears an axis
+        plt.clf() # clears the entire current figure
+        plt.close() # closes a window 
 
     # plt.show()
     # Save map
     m.save('folium_map.html')
     # Draw the map to an HTML file
     gmap.draw("google_map.html")
+
+    # gmap sans key
     with open('google_map.html', 'r') as f:
         lines = f.readlines()
 
@@ -150,6 +160,10 @@ def sort_par_model_couleur(df_commune,model):
 
 
 def plot_vehicule_evolution(df_commune, model, region=None, departement=None, commune=None, carburant=None, crit_air=None, depart_Annee=None, fin_Annee=None):
+    
+    Annees_list = [str(Annee) for Annee in range(depart_Annee, fin_Annee+1)]
+
+    print ('Annees_list ',Annees_list)
 
     # Transformation du df_communeFrame en un format long en utilisant la fonction melt()
     df_commune = df_commune.melt(id_vars=['region_de_residence',
@@ -161,8 +175,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
                           'geo_shape',
                           'lattitude',
                           'longitude'],
-                 value_vars=[str(Annee)
-                             for Annee in range(depart_Annee, fin_Annee+1)],
+                 value_vars=Annees_list,
                  var_name=[('Annee')], value_name='nombre de véhicules')
     # print ('df_commune_melted',df_commune)
     # df_commune.to_csv(p + r'/France_df_commune_unique/df_commune_melted_utf-8_b.csv',encoding="utf-8")
@@ -233,10 +246,6 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
     if fin_Annee is None:
         fin_Annee = l_Annees[-1]
 
-    
-    
-    
-
     # Conversion de la colonne Annee en entier
     # df_commune['Annee'] = df_commune['Annee'].astype(int)
 
@@ -265,7 +274,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
     # df_commune = df_commune.sort_values(by=['Annee', model])
     # df_commune = sort_par_model_couleur(df_commune,model)
     df_dept = sort_par_model_couleur(df_dept,model)
-    print(df_dept)
+    # print(df_dept)
 
     # df_commune.to_csv(p + r'/France_df_commune/df_commune_MIN_MAX.csv', encoding="utf-8")
     # print(df_commune)
@@ -340,13 +349,13 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
 
     # Calculate percentage of vehicles in each category
     df_commune['proportion'] = df_commune.groupby('commune_de_residence')['nombre de véhicules'].apply(lambda x: x / x.sum() * 100)
-    print (df_commune)
+    # print (df_commune)
 
     # Sort df_commune by Crit'Air category
     df_commune = sort_par_model_couleur(df_commune,model)
-    print (df_commune)
+    # print (df_commune)
     # df_commune.to_csv(p + r'/France_data/df_commune_proportion.csv',encoding="utf-8")
-    carto(df_commune,model)
+    carto(df_commune,model,Annees_list)
 
     
 
