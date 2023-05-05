@@ -17,7 +17,7 @@ p = os.getcwd()
 
 # , dtype={3: str, 4: str})
 df_propre = pd.read_csv(
-#    p + r'/France_df_commune_unique/df_commune_merged_geoloc_lat_long.csv', index_col=[0], dtype={4: str, 5: str, 21: str})
+#    p + r'/France_data/df_commune_merged_geoloc_lat_long.csv', index_col=[0], dtype={4: str, 5: str, 21: str})
     p + r'/France_data/parc_vp_propre_geoloc_final.csv', index_col=[0], dtype={1: str, 2: str, 20: str})
 df_propre[['lattitude', 'longitude']
           ] = df_propre['geo_point_2d'].str.split(',', expand=True)
@@ -28,79 +28,115 @@ def carto(df_commune,model,Annees_list):
     # init google map
     lat0 = df_commune.iloc[0]['lattitude']
     lon0 = df_commune.iloc[0]['longitude']
-    Annee = Annees_list[0]
-    
     # instanciation objets
     gmap = gmplot.GoogleMapPlotter(lat0, lon0, 13)
-
     m = folium.Map(location=[lat0, lon0], zoom_start=15)
-
-    for commune in df_commune['commune_de_residence'].unique():
-        df_commune_unique = df_commune[df_commune['commune_de_residence'] == commune]
-        # df_commune_unique = df_commune[df_commune['commune_de_residence'].isin(commune)]
-        # print ('for commune',df_commune)
-        lat0 = df_commune_unique.iloc[0]['lattitude']
-        lon0 = df_commune_unique.iloc[0]['longitude']
-        shape_commune = df_commune_unique.iloc[0]['geo_shape']
-        shape_commune_json = json.loads(shape_commune)
-           
-        # Récupération des coordonnées du polygone
-        polygon_coords = shape_commune_json['coordinates'][0]
-
-        # Séparation des coordonnées en deux listes: lattitudes et longitudes
-        lats = [coord[1] for coord in polygon_coords]
-        # print(lats)
-        lngs = [coord[0] for coord in polygon_coords]
-        # print(lngs)
-
-        # Tracé du polygone sur la carte
-        gmap.polygon(lats, lngs)
-        folium.GeoJson(data=shape_commune_json).add_to(m)
-           
-        plt.figure(figsize=(2.5, 2.5))
-        # Change the font size of the pie chart labels
-        plt.rcParams['font.size'] = 8
-
-        df_commune_unique = df_commune_unique.reset_index(drop=True)
-        # print('df_commune_unique', df_commune_unique)
-
-        explode_index = df_commune_unique['proportion'].idxmax()
-
-        # Create an "explode" array with a non-zero value for the largest percentage
-        explode = [0.1 if i == explode_index else 0 for i in range(len(df_commune_unique))]
-
-        plt.pie(df_commune_unique['proportion'], labels=df_commune_unique[model],autopct='%1.1f%%',
-                colors=df_commune_unique['couleur'], explode=explode)
-        plt.title(commune+' / '+Annee)
-        
-
-        # Save the plot to a BytesIO object
-        img = BytesIO()
-        plt.savefig(img, format='png')
-        img.seek(0)
-
-        # Encode the image as a base64 string
-        encoded = base64.b64encode(img.read()).decode()
-
-        # Create an HTML img tag using the base64 string
-        html = f'<img src="data:image/png;base64,{encoded}">'
  
-        # Add a marker for each location in the df_communeFrame
-        gmap.marker(lat0, lon0, info_window=html)
+    html_list = []
+    popups_list = []
+    location_list = []
+    i = 0
+    j = 0
+    for Annee in Annees_list:
+        df_commune_filtered = df_commune[df_commune['Annee'] == Annee]
+        print (df_commune_filtered['Annee'])
         
-        # instance objet marker_cluster pour folium
-        marker_cluster = MarkerCluster().add_to(m)
+        for commune in df_commune_filtered['commune_de_residence'].unique():
+            df_commune_unique = df_commune_filtered[df_commune['commune_de_residence'] == commune]
+            # df_commune_unique = df_commune[df_commune['commune_de_residence'].isin(commune)]
+            # print ('for commune',df_commune)
+            lat0 = df_commune_unique.iloc[0]['lattitude']
+            lon0 = df_commune_unique.iloc[0]['longitude']
+            
+            # location
+            location = lat0,lon0
+            location_list.append(location)
+            ll = location_list
+
+            print ('location',location)
+
+            shape_commune = df_commune_unique.iloc[0]['geo_shape']
+            shape_commune_json = json.loads(shape_commune)
+            
+            
+            # Récupération des coordonnées du polygone
+            polygon_coords = shape_commune_json['coordinates'][0]
+
+            # Séparation des coordonnées en deux listes: lattitudes et longitudes
+            lats = [coord[1] for coord in polygon_coords]
+            # print(lats)
+            lngs = [coord[0] for coord in polygon_coords]
+            # print(lngs)
+
+            # Tracé du polygone sur la carte
+            gmap.polygon(lats, lngs)
+            folium.GeoJson(data=shape_commune_json).add_to(m)
+            
+            plt.figure(figsize=(2.5, 2.5))
+            # Change the font size of the pie chart labels
+            plt.rcParams['font.size'] = 8
+
+            df_commune_unique = df_commune_unique.reset_index(drop=True)
+            # print('df_commune_unique', df_commune_unique)
+
+            explode_index = df_commune_unique['proportion'].idxmax()
+
+            # Create an "explode" array with a non-zero value for the largest percentage
+            explode = [0.1 if i == explode_index else 0 for i in range(len(df_commune_unique))]
+
+            plt.pie(df_commune_unique['proportion'], labels=df_commune_unique[model],autopct='%1.1f%%',
+                    colors=df_commune_unique['couleur'], explode=explode, textprops={'color': 'blue'})
+            plt.title(commune+' / '+Annee)
+            
+            # Save the plot to a BytesIO object
+            img = BytesIO()
+            plt.savefig(img, format='png')
+            img.seek(0)
+
+            # Encode the image as a base64 string
+            encoded = base64.b64encode(img.read()).decode()
+
+            # Create an HTML img tag using the base64 string
+            html = f'<img src="data:image/png;base64,{encoded}">'
+            html_list.append(html)
+
+            plt.cla() # clears an axis
+            plt.clf() # clears the entire current figure
+            plt.close() # closes a window 
         
+        len_html = (len(html_list))
+        len_Annee = (len(Annees_list))
+        s_html = int(len_html//len_Annee)
+        print ('s_html',s_html)
+        print (len_html)
+        print (len_Annee)
+
+   
+    for html in html_list:
         # Create a folium Popup object containing the HTML img tag
         popup = folium.Popup(html, max_width=2650)
-        # popup2 = folium.Popup(html, max_width=2650)
-        location = lat0,lon0
+        popups_list.append(popup)
+    # instance objet marker_cluster pour folium
+    marker_cluster = MarkerCluster().add_to(m)
+    
+    
+    
+    for popup in popups_list:
+        print('i',i)
+        print ('location_list',location_list[i])
         # Add a marker to the map with the popup
-        folium.Marker(location=location, popup=popup).add_to(marker_cluster)
-        # folium.Marker(location=location, popup=popup2).add_to(marker_cluster)
-        plt.cla() # clears an axis
-        plt.clf() # clears the entire current figure
-        plt.close() # closes a window 
+        folium.Marker(location=location_list[i], popup=popup).add_to(marker_cluster)
+        i += 1
+    
+    
+    html_list_gmap = [html_list[k::s_html] for k in range(s_html)]
+    ll = ll[:s_html]
+    print (len(ll))
+    for location_ in ll:
+        hs = ''.join(html_list_gmap[j])
+        print('hs ',len(hs))
+        gmap.marker(location_[0], location_[1], info_window=hs)
+        j += 1
 
     # plt.show()
     # Save map
@@ -115,7 +151,7 @@ def carto(df_commune,model,Annees_list):
     with open('google_map.html', 'w') as f:
         for line in lines:
             if '<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?libraries=visualization"></script>' in line:
-                # f.write('<div id="carte"></div> <script src="https://cdn.jsdelivr.net/gh/somanchiu/Keyless-Google-Maps-API@v5.9/mapsJavaScriptAPI.js"></script>')
+                # f.write('<div id="carte"><script src="https://cdn.jsdelivr.net/gh/somanchiu/Keyless-Google-Maps-API@v5.9/mapsJavaScriptAPI.js"></script>')
                 f.write('<div id="carte"></div> <script src="gm_keyless.js" async defer></script>')
             else:
                 f.write(line)
@@ -196,6 +232,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
 
     if region == None:
         region_str = 'toutes régions'
+        list_region = pd.unique(df_propre['region_de_residence'])
     else:
         list_region = region.split(',')
         df_commune = df_commune[df_commune['region_de_residence'].isin(list_region)]
@@ -206,6 +243,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
         
     if departement == None:
         departement_str = 'tous départements'
+        list_departement = pd.unique(df_propre['departement_de_residence'])
     else:
         list_departement = departement.split(',')
         df_commune = df_commune[df_commune['departement_de_residence'].isin(list_departement)]
@@ -216,6 +254,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
         
     if commune == None:
         commune_str = 'toutes communes'
+        list_commune = pd.unique(df_propre['commune_de_residence'])
     else:
         list_commune = commune.split(',')
         df_commune = df_commune[df_commune['commune_de_residence'].isin(list_commune)]
@@ -226,6 +265,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
 
     if carburant == None:
         carburant_str = 'tous carburants'
+        list_carburant = pd.unique(df_propre['carburant'])
     else:
         list_carburant = carburant.split(',')
         df_commune = df_commune[df_commune['carburant'].isin(list_carburant)]
@@ -233,6 +273,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
 
     if crit_air == None:
         crit_air_str = "tous Crit'Air"
+        list_crit_air = pd.unique(df_propre['crit_air'])
     else:
         list_crit_air = crit_air.split(',')
         df_commune = df_commune[df_commune['crit_air'].isin(list_crit_air)]
@@ -368,14 +409,14 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
 # region_de_residence = pd.unique(df_propre['region_de_residence'])
 # print(region_de_residence)
 
-# carburant = pd.unique(df_propre['carburant'])
+# carburant = df_propre['carburant'].unique()
 # print (carburant)
 
 # for r in region_de_residence:
 #     print (r)
 #     plot_vehicule_evolution(df_propre,'carburant',r,None,None,None,None,None,2021)
-# plot_vehicule_evolution(df_propre,'crit_air',None,None,'Menucourt','Hybride rechargeable,Electrique et hydrogène',None,None,None)
+# plot_vehicule_evolution(df_propre,'crit_air',None,None,'Menucourt,Boisemont','Hybride rechargeable,Electrique et hydrogène',None,None,None)
 plot_vehicule_evolution(df_propre, 'crit_air', None,
-                        "Yvelines", None, None, None, 2021, 2021)
+                        None, 'Menucourt,Boisemont,Ableiges', None, None, 2015, 2021)
 # plot_vehicule_evolution(df_propre, 'crit_air', 'Auvergne-Rhône-Alpes',
 #                         None, None, None, None, 2020, 2021)
