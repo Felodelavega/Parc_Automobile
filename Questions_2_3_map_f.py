@@ -12,6 +12,9 @@ from gmaps import *
 import base64
 from io import BytesIO
 import json
+import imageio.v3 as imageio
+import imageio.v3 as iio
+import io
 
 p = os.getcwd()
 
@@ -26,15 +29,17 @@ df_propre[['lattitude', 'longitude']] = df_propre[[
 
 def carto(df_commune,model,Annees_list):
     # init google map
+    # apikey = *******AIzaSyD1p5gcCvLbVq*******huqtdMsg_1laPEDAOoXXQ***********
     lat0 = df_commune.iloc[0]['lattitude']
     lon0 = df_commune.iloc[0]['longitude']
     # instanciation objets
-    gmap = gmplot.GoogleMapPlotter(lat0, lon0, 13)
+    gmap = gmplot.GoogleMapPlotter(lat0, lon0, 13)#, apikey=apikey)
     m = folium.Map(location=[lat0, lon0], zoom_start=15)
  
     html_list = []
     popups_list = []
     location_list = []
+    images_list = []
     i = 0
     j = 0
     for Annee in Annees_list:
@@ -51,8 +56,6 @@ def carto(df_commune,model,Annees_list):
             # location
             location = lat0,lon0
             location_list.append(location)
-            ll = location_list
-
             print ('location',location)
 
             shape_commune = df_commune_unique.iloc[0]['geo_shape']
@@ -87,7 +90,8 @@ def carto(df_commune,model,Annees_list):
             plt.pie(df_commune_unique['proportion'], labels=df_commune_unique[model],autopct='%1.1f%%',
                     colors=df_commune_unique['couleur'], explode=explode, textprops={'color': 'blue'})
             plt.title(commune+' / '+Annee)
-            
+
+               
             # Save the plot to a BytesIO object
             img = BytesIO()
             plt.savefig(img, format='png')
@@ -96,31 +100,59 @@ def carto(df_commune,model,Annees_list):
             # Encode the image as a base64 string
             encoded = base64.b64encode(img.read()).decode()
 
-            # Create an HTML img tag using the base64 string
+            images_list.append(imageio.imread(img))
+
+             # Create an HTML img tag using the base64 string
             html = f'<img src="data:image/png;base64,{encoded}">'
             html_list.append(html)
-
+            
             plt.cla() # clears an axis
             plt.clf() # clears the entire current figure
-            plt.close() # closes a window 
+            plt.close() # closes a window
         
+
         len_html = (len(html_list))
         len_Annee = (len(Annees_list))
         s_html = int(len_html//len_Annee)
         print ('s_html',s_html)
         print (len_html)
         print (len_Annee)
+        
+        # images_list = [images_list[k::s_html] for k in range(s_html)]
+        # Créer un GIF animé à partir des images_list
+        # print ('len(images_list)',len(images_list))
+        # imageio.mimsave('animation_'+str(z)+'.gif', images_list, duration=300)
+        # z += 1
+        
 
-   
+    images_list = [images_list[k::s_html] for k in range(s_html)]
+    print ('len(images_list)',len(images_list))
+    html_list_gmap = [html_list[l::s_html] for l in range(s_html)]
+    print ('len(html_list_gmap)',len(html_list_gmap))
+    ll = location_list[:s_html]
+    print ('len(ll)',len(ll))
+    print ('len(html_list)',len(html_list))
+    for location_ in ll:
+        hs = ''.join(html_list_gmap[j])
+        gif_encoded = iio.imwrite("<bytes>", images_list[j], extension=".gif", duration=1000, loop=0)
+        encoded_gif = base64.b64encode(gif_encoded).decode('utf-8')
+        html_gif = f'<img src="data:image/gif;base64,{encoded_gif}">'
+        print('hs ',len(hs))
+        gmap.marker(location_[0], location_[1], info_window=html_gif)
+        location_list.append(location_)
+        html_list.append(html_gif)
+        j += 1
+
+    print ('len(html_list)',len(html_list))
+
     for html in html_list:
         # Create a folium Popup object containing the HTML img tag
         popup = folium.Popup(html, max_width=2650)
         popups_list.append(popup)
+    
     # instance objet marker_cluster pour folium
     marker_cluster = MarkerCluster().add_to(m)
-    
-    
-    
+       
     for popup in popups_list:
         print('i',i)
         print ('location_list',location_list[i])
@@ -128,15 +160,6 @@ def carto(df_commune,model,Annees_list):
         folium.Marker(location=location_list[i], popup=popup).add_to(marker_cluster)
         i += 1
     
-    
-    html_list_gmap = [html_list[k::s_html] for k in range(s_html)]
-    ll = ll[:s_html]
-    print (len(ll))
-    for location_ in ll:
-        hs = ''.join(html_list_gmap[j])
-        print('hs ',len(hs))
-        gmap.marker(location_[0], location_[1], info_window=hs)
-        j += 1
 
     # plt.show()
     # Save map
@@ -155,6 +178,9 @@ def carto(df_commune,model,Annees_list):
                 f.write('<div id="carte"></div> <script src="gm_keyless.js" async defer></script>')
             else:
                 f.write(line)
+
+def new_func(graphs):
+    return graphs
 
 def y_formatter(y, pos):
     return "{:,}".format(int(y)).replace(',', ' ')
@@ -232,7 +258,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
 
     if region == None:
         region_str = 'toutes régions'
-        list_region = pd.unique(df_propre['region_de_residence'])
+        list_region = df_propre['region_de_residence'].unique()
     else:
         list_region = region.split(',')
         df_commune = df_commune[df_commune['region_de_residence'].isin(list_region)]
@@ -243,7 +269,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
         
     if departement == None:
         departement_str = 'tous départements'
-        list_departement = pd.unique(df_propre['departement_de_residence'])
+        list_departement = df_propre['departement_de_residence'].unique()
     else:
         list_departement = departement.split(',')
         df_commune = df_commune[df_commune['departement_de_residence'].isin(list_departement)]
@@ -254,7 +280,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
         
     if commune == None:
         commune_str = 'toutes communes'
-        list_commune = pd.unique(df_propre['commune_de_residence'])
+        list_commune = df_propre['commune_de_residence'].unique()
     else:
         list_commune = commune.split(',')
         df_commune = df_commune[df_commune['commune_de_residence'].isin(list_commune)]
@@ -265,7 +291,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
 
     if carburant == None:
         carburant_str = 'tous carburants'
-        list_carburant = pd.unique(df_propre['carburant'])
+        list_carburant = df_propre['carburant'].unique()
     else:
         list_carburant = carburant.split(',')
         df_commune = df_commune[df_commune['carburant'].isin(list_carburant)]
@@ -273,7 +299,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
 
     if crit_air == None:
         crit_air_str = "tous Crit'Air"
-        list_crit_air = pd.unique(df_propre['crit_air'])
+        list_crit_air = df_propre['crit_air'].unique()
     else:
         list_crit_air = crit_air.split(',')
         df_commune = df_commune[df_commune['crit_air'].isin(list_crit_air)]
@@ -416,7 +442,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
 #     print (r)
 #     plot_vehicule_evolution(df_propre,'carburant',r,None,None,None,None,None,2021)
 # plot_vehicule_evolution(df_propre,'crit_air',None,None,'Menucourt,Boisemont','Hybride rechargeable,Electrique et hydrogène',None,None,None)
-plot_vehicule_evolution(df_propre, 'crit_air', None,
-                        None, 'Menucourt,Boisemont,Ableiges', None, None, 2015, 2021)
+plot_vehicule_evolution(df_propre, 'carburant', None,
+                        None, 'Aubervilliers,Saint-Germain-en-Laye,Sceaux', None, None, 2015, 2021)
 # plot_vehicule_evolution(df_propre, 'crit_air', 'Auvergne-Rhône-Alpes',
 #                         None, None, None, None, 2020, 2021)
