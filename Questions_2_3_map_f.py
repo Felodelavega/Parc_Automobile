@@ -26,13 +26,19 @@ df_propre[['lattitude', 'longitude']] = df_propre[[
     'lattitude', 'longitude']].astype(float)
 
 
-list_location_folium = []
-list_location_gmap = []
-merged_str_png_html_list =[]
-list_gif_image = []
-html_list = []
 
 def carto(df_commune,model,Annees_list):
+    list_location_folium = []
+    list_location_gmap = []
+    merged_str_png_html_list =[]
+    list_gif_image = []
+    html_list = []
+    png_html_list = []
+    html_list_gmap=[]
+    popups_list_html = []
+    list_html_gif_annimated = []
+    list_png_image = []
+    gif_html_list = []
     
     # init google map
     lat0 = df_commune.iloc[0]['lattitude']
@@ -42,13 +48,7 @@ def carto(df_commune,model,Annees_list):
     gmap = gmplot.GoogleMapPlotter(lat0, lon0, 13)
     m = folium.Map(location=[lat0, lon0], zoom_start=15)
  
-    png_html_list = []
-    html_list_gmap=[]
-    popups_list_html = []
-    list_gif_image = []
     
-    gif_html_list = []
-    list_png_image = []
 
     i = 0
     j = 0
@@ -128,6 +128,8 @@ def carto(df_commune,model,Annees_list):
             gif_image = iio.imread(img)
             list_gif_image.append(gif_image)
             html_gif = f'<img src="data:image/gif;base64,{gif_image}">'
+            gif_html_list.append(html_gif)
+        
             
 
             plt.cla() # clears an axis
@@ -145,7 +147,7 @@ def carto(df_commune,model,Annees_list):
         gif_annimation_from_list = iio.imwrite("<bytes>", list_gif_image, extension=".gif", duration=1000, loop=0)
         gif_encoded_annimation = base64.b64encode(gif_annimation_from_list).decode('utf-8')
         html_gif_annimated = f'<img src="data:image/gif;base64,{gif_encoded_annimation}">'
-        gif_html_list.append(html_gif_annimated)
+        list_html_gif_annimated.append(html_gif_annimated)
         list_gif_image = []
 
         # ajout du gif annimé a folium et de sa localisation avec les coordonnée de gmap(importtant)
@@ -154,6 +156,9 @@ def carto(df_commune,model,Annees_list):
 
         merged_str_png_html_list.append(''.join(png_html_list))
         png_html_list = []
+
+        # merged_str_png_html_list.append(''.join(gif_html_list))
+        # gif_html_list = []
 
     for html in html_list: 
         popup = folium.Popup(html, max_width=2650)
@@ -166,7 +171,7 @@ def carto(df_commune,model,Annees_list):
     len_popups_list_html = (len(popups_list_html))
     len_list_location_folium = (len(list_location_folium))
     len_list_location_gmap = (len(list_location_gmap))
-    len_gif_html_list = (len(gif_html_list))
+    len_list_html_gif_annimated = (len(list_html_gif_annimated))
     len_png_html_list = (len(png_html_list))
     len_html_list_gmap = (len(html_list_gmap))
     len_merged_str_png_html_list = (len(merged_str_png_html_list))
@@ -179,7 +184,7 @@ def carto(df_commune,model,Annees_list):
     print ('len_popups_list_html',len_popups_list_html)
     print ('len_list_location_folium',len_list_location_folium)
     print ('len_list_location_gmap',len_list_location_gmap)
-    print ('len_gif_html_list',len_gif_html_list)
+    print ('len_list_html_gif_annimated',len_list_html_gif_annimated)
     print ('len_png_html_list',len_png_html_list)
     print ('len_html_list_gmap',len_html_list_gmap)
     print ('len_Annees_list',len_Annees_list)
@@ -192,7 +197,7 @@ def carto(df_commune,model,Annees_list):
         i +=1
 
     for j in range(len(list_location_gmap)):
-        gmap.marker(list_location_gmap[j][0], list_location_gmap[j][1], info_window=merged_str_png_html_list[j]+html_gif_annimated)
+        gmap.marker(list_location_gmap[j][0], list_location_gmap[j][1], info_window=merged_str_png_html_list[j]+list_html_gif_annimated[j])
 
     # Save map
     m.save('folium_map.html')
