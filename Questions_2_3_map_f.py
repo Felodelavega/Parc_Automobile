@@ -12,9 +12,7 @@ from gmaps import *
 import base64
 from io import BytesIO
 import json
-import imageio.v3 as imageio
 import imageio.v3 as iio
-import io
 
 p = os.getcwd()
 
@@ -27,141 +25,175 @@ df_propre[['lattitude', 'longitude']
 df_propre[['lattitude', 'longitude']] = df_propre[[
     'lattitude', 'longitude']].astype(float)
 
+
+list_location_folium = []
+list_location_gmap = []
+merged_str_png_html_list =[]
+list_gif_image = []
+html_list = []
+
 def carto(df_commune,model,Annees_list):
+    
     # init google map
-    # apikey = *******AIzaSyD1p5gcCvLbVq*******huqtdMsg_1laPEDAOoXXQ***********
     lat0 = df_commune.iloc[0]['lattitude']
     lon0 = df_commune.iloc[0]['longitude']
+
     # instanciation objets
-    gmap = gmplot.GoogleMapPlotter(lat0, lon0, 13)#, apikey=apikey)
+    gmap = gmplot.GoogleMapPlotter(lat0, lon0, 13)
     m = folium.Map(location=[lat0, lon0], zoom_start=15)
  
-    html_list = []
-    popups_list = []
-    location_list = []
-    images_list = []
+    png_html_list = []
+    html_list_gmap=[]
+    popups_list_html = []
+    list_gif_image = []
+    
+    gif_html_list = []
+    list_png_image = []
+
     i = 0
     j = 0
-    for Annee in Annees_list:
-        df_commune_filtered = df_commune[df_commune['Annee'] == Annee]
-        print (df_commune_filtered['Annee'])
+    
+    for commune in df_commune['commune_de_residence'].unique():
+        # print (commune)
+        df_commune_unique = df_commune[df_commune['commune_de_residence'] == commune]
+        # print ('df_commune_unique',df_commune_unique)
+        # df_commune_unique = df_commune[df_commune['commune_de_residence'].isin(commune)]
+        # print ('for commune',df_commune)
+        lat_gmap = df_commune_unique.iloc[0]['lattitude']
+        lon_gmap = df_commune_unique.iloc[0]['longitude']
         
-        for commune in df_commune_filtered['commune_de_residence'].unique():
-            df_commune_unique = df_commune_filtered[df_commune['commune_de_residence'] == commune]
-            # df_commune_unique = df_commune[df_commune['commune_de_residence'].isin(commune)]
-            # print ('for commune',df_commune)
-            lat0 = df_commune_unique.iloc[0]['lattitude']
-            lon0 = df_commune_unique.iloc[0]['longitude']
-            
-            # location
-            location = lat0,lon0
-            location_list.append(location)
-            print ('location',location)
+        # location
+        location_gmap = lat_gmap,lon_gmap
+        list_location_gmap.append(location_gmap)
+        print ('list_location_gmap',list_location_gmap)
 
-            shape_commune = df_commune_unique.iloc[0]['geo_shape']
-            shape_commune_json = json.loads(shape_commune)
-            
-            
-            # Récupération des coordonnées du polygone
-            polygon_coords = shape_commune_json['coordinates'][0]
+        shape_commune = df_commune_unique.iloc[0]['geo_shape']
+        shape_commune_json = json.loads(shape_commune)
+               
+        # Récupération des coordonnées du polygone
+        polygon_coords = shape_commune_json['coordinates'][0]
 
-            # Séparation des coordonnées en deux listes: lattitudes et longitudes
-            lats = [coord[1] for coord in polygon_coords]
-            # print(lats)
-            lngs = [coord[0] for coord in polygon_coords]
-            # print(lngs)
+        # Séparation des coordonnées en deux listes: lattitudes et longitudes
+        lats = [coord[1] for coord in polygon_coords]
+        # print(lats)
+        lngs = [coord[0] for coord in polygon_coords]
+        # print(lngs)
 
-            # Tracé du polygone sur la carte
-            gmap.polygon(lats, lngs)
-            folium.GeoJson(data=shape_commune_json).add_to(m)
-            
+        # Tracé du polygone sur la carte
+        gmap.polygon(lats, lngs)
+        folium.GeoJson(data=shape_commune_json).add_to(m)
+        
+        for Annee in Annees_list:
+            df_commune_Annee = df_commune_unique[df_commune_unique['Annee'] == Annee]
+            # print (df_commune_Annee)
+            # print (df_commune_filtered['Annee'])
+            #for commune in pd.unique(df_commune_Annee['commune_de_residence']):
+
             plt.figure(figsize=(2.5, 2.5))
             # Change the font size of the pie chart labels
             plt.rcParams['font.size'] = 8
 
-            df_commune_unique = df_commune_unique.reset_index(drop=True)
+            df_commune_Annee = df_commune_Annee.reset_index(drop=True)
             # print('df_commune_unique', df_commune_unique)
 
-            explode_index = df_commune_unique['proportion'].idxmax()
+            explode_index = df_commune_Annee['proportion'].idxmax()
 
             # Create an "explode" array with a non-zero value for the largest percentage
-            explode = [0.1 if i == explode_index else 0 for i in range(len(df_commune_unique))]
+            explode = [0.1 if i == explode_index else 0 for i in range(len(df_commune_Annee))]
+            
+            #***********************************************
+            print ('df_commune_Annee',df_commune_Annee)
+            #***********************************************
 
-            plt.pie(df_commune_unique['proportion'], labels=df_commune_unique[model],autopct='%1.1f%%',
-                    colors=df_commune_unique['couleur'], explode=explode, textprops={'color': 'blue'})
-            plt.title(commune+' / '+Annee)
+            plt.pie(df_commune_Annee['proportion'], labels=df_commune_Annee[model],autopct='%1.1f%%',
+                    colors=df_commune_Annee['couleur'], explode=explode, textprops={'color': 'blue'})
+            titre = commune+'-'+Annee
+            plt.title(titre)
 
-               
             # Save the plot to a BytesIO object
             img = BytesIO()
             plt.savefig(img, format='png')
             img.seek(0)
+            list_png_image.append(img)
 
             # Encode the image as a base64 string
-            encoded = base64.b64encode(img.read()).decode()
-
-            images_list.append(imageio.imread(img))
-
-             # Create an HTML img tag using the base64 string
-            html = f'<img src="data:image/png;base64,{encoded}">'
-            html_list.append(html)
+            png_encoded = base64.b64encode(img.read()).decode()
             
+            # Create an HTML img tag using the base64 string of the image contents
+            html_png = f'<img src="data:image/png;base64,{png_encoded}">'
+            png_html_list.append(html_png)
+            html_list.append(html_png)
+            
+            # png to gif conversion from png img.seek(0)
+            gif_image = iio.imread(img)
+            list_gif_image.append(gif_image)
+            html_gif = f'<img src="data:image/gif;base64,{gif_image}">'
+            
+
             plt.cla() # clears an axis
             plt.clf() # clears the entire current figure
             plt.close() # closes a window
+
+            lat_folium = df_commune_Annee.iloc[0]['lattitude']
+            lon_folium = df_commune_Annee.iloc[0]['longitude']
         
+            # location
+            location_folium = lat_folium,lon_folium
+            list_location_folium.append(location_folium)
+            # print ('list_location_folium',list_location_folium)
 
-        len_html = (len(html_list))
-        len_Annee = (len(Annees_list))
-        s_html = int(len_html//len_Annee)
-        print ('s_html',s_html)
-        print (len_html)
-        print (len_Annee)
-        
-        # images_list = [images_list[k::s_html] for k in range(s_html)]
-        # Créer un GIF animé à partir des images_list
-        # print ('len(images_list)',len(images_list))
-        # imageio.mimsave('animation_'+str(z)+'.gif', images_list, duration=300)
-        # z += 1
-        
+        gif_annimation_from_list = iio.imwrite("<bytes>", list_gif_image, extension=".gif", duration=1000, loop=0)
+        gif_encoded_annimation = base64.b64encode(gif_annimation_from_list).decode('utf-8')
+        html_gif_annimated = f'<img src="data:image/gif;base64,{gif_encoded_annimation}">'
+        gif_html_list.append(html_gif_annimated)
+        list_gif_image = []
 
-    images_list = [images_list[k::s_html] for k in range(s_html)]
-    print ('len(images_list)',len(images_list))
-    html_list_gmap = [html_list[l::s_html] for l in range(s_html)]
-    print ('len(html_list_gmap)',len(html_list_gmap))
-    ll = location_list[:s_html]
-    print ('len(ll)',len(ll))
-    print ('len(html_list)',len(html_list))
-    for location_ in ll:
-        hs = ''.join(html_list_gmap[j])
-        gif_encoded = iio.imwrite("<bytes>", images_list[j], extension=".gif", duration=1000, loop=0)
-        encoded_gif = base64.b64encode(gif_encoded).decode('utf-8')
-        html_gif = f'<img src="data:image/gif;base64,{encoded_gif}">'
-        print('hs ',len(hs))
-        gmap.marker(location_[0], location_[1], info_window=html_gif)
-        location_list.append(location_)
-        html_list.append(html_gif)
-        j += 1
+        # ajout du gif annimé a folium et de sa localisation avec les coordonnée de gmap(importtant)
+        html_list.append(html_gif_annimated)
+        list_location_folium.append((lat_gmap,lon_gmap))
 
-    print ('len(html_list)',len(html_list))
+        merged_str_png_html_list.append(''.join(png_html_list))
+        png_html_list = []
 
-    for html in html_list:
-        # Create a folium Popup object containing the HTML img tag
+    for html in html_list: 
         popup = folium.Popup(html, max_width=2650)
-        popups_list.append(popup)
-    
+        popups_list_html.append(popup)
+            
     # instance objet marker_cluster pour folium
     marker_cluster = MarkerCluster().add_to(m)
-       
-    for popup in popups_list:
-        print('i',i)
-        print ('location_list',location_list[i])
-        # Add a marker to the map with the popup
-        folium.Marker(location=location_list[i], popup=popup).add_to(marker_cluster)
-        i += 1
-    
 
-    # plt.show()
+       
+    len_popups_list_html = (len(popups_list_html))
+    len_list_location_folium = (len(list_location_folium))
+    len_list_location_gmap = (len(list_location_gmap))
+    len_gif_html_list = (len(gif_html_list))
+    len_png_html_list = (len(png_html_list))
+    len_html_list_gmap = (len(html_list_gmap))
+    len_merged_str_png_html_list = (len(merged_str_png_html_list))
+
+    # type_html_list_gmap = (type(html_list_gmap[0]))
+    # print ('type_html_list_gmap',type_html_list_gmap)
+
+    len_Annees_list = (len(Annees_list))
+    division = int(len_png_html_list//len_Annees_list)
+    print ('len_popups_list_html',len_popups_list_html)
+    print ('len_list_location_folium',len_list_location_folium)
+    print ('len_list_location_gmap',len_list_location_gmap)
+    print ('len_gif_html_list',len_gif_html_list)
+    print ('len_png_html_list',len_png_html_list)
+    print ('len_html_list_gmap',len_html_list_gmap)
+    print ('len_Annees_list',len_Annees_list)
+    print ('division',division)
+    print ('len_merged_str_png_html_list',len_merged_str_png_html_list)
+
+
+    for popup in popups_list_html:
+        folium.Marker(list_location_folium[i], popup=popup).add_to(marker_cluster)
+        i +=1
+
+    for j in range(len(list_location_gmap)):
+        gmap.marker(list_location_gmap[j][0], list_location_gmap[j][1], info_window=merged_str_png_html_list[j]+html_gif_annimated)
+
     # Save map
     m.save('folium_map.html')
     # Draw the map to an HTML file
@@ -179,8 +211,7 @@ def carto(df_commune,model,Annees_list):
             else:
                 f.write(line)
 
-def new_func(graphs):
-    return graphs
+  
 
 def y_formatter(y, pos):
     return "{:,}".format(int(y)).replace(',', ' ')
@@ -219,8 +250,6 @@ def sort_par_model_couleur(df_commune,model):
     else: print ('model inconnu')
 
 
-
-
 def plot_vehicule_evolution(df_commune, model, region=None, departement=None, commune=None, carburant=None, crit_air=None, depart_Annee=None, fin_Annee=None):
     
     Annees_list = [str(Annee) for Annee in range(depart_Annee, fin_Annee+1)]
@@ -238,7 +267,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
                           'lattitude',
                           'longitude'],
                  value_vars=Annees_list,
-                 var_name=[('Annee')], value_name='nombre de véhicules')
+                 var_name='Annee', value_name='nombre de véhicules')
     # print ('df_commune_melted',df_commune)
     # df_commune.to_csv(p + r'/France_df_commune_unique/df_commune_melted_utf-8_b.csv',encoding="utf-8")
     
@@ -413,7 +442,6 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
     plt.show()
 
     
-
     # Calculate percentage of vehicles in each category
     df_commune['proportion'] = df_commune.groupby('commune_de_residence')['nombre de véhicules'].apply(lambda x: x / x.sum() * 100)
     # print (df_commune)
@@ -442,7 +470,14 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
 #     print (r)
 #     plot_vehicule_evolution(df_propre,'carburant',r,None,None,None,None,None,2021)
 # plot_vehicule_evolution(df_propre,'crit_air',None,None,'Menucourt,Boisemont','Hybride rechargeable,Electrique et hydrogène',None,None,None)
-plot_vehicule_evolution(df_propre, 'carburant', None,
-                        None, 'Aubervilliers,Saint-Germain-en-Laye,Sceaux', None, None, 2015, 2021)
+# plot_vehicule_evolution(df_propre, 'crit_air', None,
+#                         None, 'Aubervilliers,Saint-Germain-en-Laye,Sceaux', None, None, 2015, 2021)
+
+# plot_vehicule_evolution(df_propre, 'crit_air', None,
+#                         'Hauts-de-Seine', None, None, None, 2019, 2021)
+
+plot_vehicule_evolution(df_propre, 'crit_air', None,
+                         None, 'Aubervilliers,Saint-Germain-en-Laye,Sceaux', None, None, 2012, 2022)
+
 # plot_vehicule_evolution(df_propre, 'crit_air', 'Auvergne-Rhône-Alpes',
-#                         None, None, None, None, 2020, 2021)
+#                         'Yvelines', None, None, None, 2020, 2021)
