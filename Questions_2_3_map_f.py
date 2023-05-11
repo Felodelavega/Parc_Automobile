@@ -25,8 +25,6 @@ df_propre[['lattitude', 'longitude']
 df_propre[['lattitude', 'longitude']] = df_propre[[
     'lattitude', 'longitude']].astype(float)
 
-
-
 def carto(df_commune,model,Annees_list):
     list_location_folium = []
     list_location_gmap = []
@@ -48,8 +46,6 @@ def carto(df_commune,model,Annees_list):
     gmap = gmplot.GoogleMapPlotter(lat0, lon0, 13)
     m = folium.Map(location=[lat0, lon0], zoom_start=15)
  
-    
-
     i = 0
     j = 0
     
@@ -129,8 +125,6 @@ def carto(df_commune,model,Annees_list):
             list_gif_image.append(gif_image)
             html_gif = f'<img src="data:image/gif;base64,{gif_image}">'
             gif_html_list.append(html_gif)
-        
-            
 
             plt.cla() # clears an axis
             plt.clf() # clears the entire current figure
@@ -166,7 +160,6 @@ def carto(df_commune,model,Annees_list):
             
     # instance objet marker_cluster pour folium
     marker_cluster = MarkerCluster().add_to(m)
-
        
     len_popups_list_html = (len(popups_list_html))
     len_list_location_folium = (len(list_location_folium))
@@ -191,7 +184,6 @@ def carto(df_commune,model,Annees_list):
     print ('division',division)
     print ('len_merged_str_png_html_list',len_merged_str_png_html_list)
 
-
     for popup in popups_list_html:
         folium.Marker(list_location_folium[i], popup=popup).add_to(marker_cluster)
         i +=1
@@ -215,8 +207,6 @@ def carto(df_commune,model,Annees_list):
                 f.write('<div id="carte"></div> <script src="gm_keyless.js" async defer></script>')
             else:
                 f.write(line)
-
-  
 
 def y_formatter(y, pos):
     return "{:,}".format(int(y)).replace(',', ' ')
@@ -286,7 +276,6 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
             l_Annees.append(int(element))
 
     # print(l_Annees)
-
     # Si les arguments région, département, commune ou type de carburant sont vides,
     # on leur attribue la valeur du filtre correspondant
 
@@ -349,9 +338,7 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
 
     # Conversion de la colonne Annee en entier
     # df_commune['Annee'] = df_commune['Annee'].astype(int)
-
     # df_commune.groupby([model])['nombre de véhicules'].sum().plot.pie(autopct='%1.1f%%')
-
     # df_commune = df_commune.groupby(['Annee', model, 'geo_point_2d', 'lattitude', 'longitude'])['nombre de véhicules'].sum().reset_index()
     df_commune = df_commune.groupby([ model,'Annee', 'departement_de_residence','commune_de_residence','geo_point_2d', 'geo_shape', 'lattitude', 'longitude'])[
         'nombre de véhicules'].agg(['sum', 'mean', 'min', 'max']).reset_index()
@@ -403,16 +390,11 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
     
     # sns.barplot(df_commune_unique=df_commune, x='Annee', y='nombre de véhicules',
     #             palette=colors, hue=model)
-
     # sns.barplot(df_commune=df_commune, x='Annee', y='nombre de véhicules',palette="mako", hue=model)#, ax=ax0)
-
     # ax0.set_ylabel("Sequential")
-
     # ax1 = ax0.twinx()
     # sns.boxplot(df_commune=df_commune, x='Annee', y='nombre de véhicules',palette="rocket", hue=model, ax=ax1)
-
     # sns.barplot(df_commune=df_commune, x='Annee', y='nombre de véhicules', hue=model)
-
     # plt.gca().yaxis.set_ticks(range(0, 100, 10), minor = True)
 
     # Récupération de l'objet Axes courant
@@ -457,6 +439,8 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
     # df_commune.to_csv(p + r'/France_data/df_commune_proportion.csv',encoding="utf-8")
     carto(df_commune,model,Annees_list)
 
+plot_vehicule_evolution(df_propre, 'crit_air', None,
+                         None, 'Aubervilliers,Saint-Germain-en-Laye,Sceaux', None, None, 2012, 2022)
     
 
 # exemples
@@ -481,8 +465,6 @@ def plot_vehicule_evolution(df_commune, model, region=None, departement=None, co
 # plot_vehicule_evolution(df_propre, 'crit_air', None,
 #                         'Hauts-de-Seine', None, None, None, 2019, 2021)
 
-plot_vehicule_evolution(df_propre, 'crit_air', None,
-                         None, 'Aubervilliers,Saint-Germain-en-Laye,Sceaux', None, None, 2012, 2022)
 
 # plot_vehicule_evolution(df_propre, 'crit_air', 'Auvergne-Rhône-Alpes',
 #                         'Yvelines', None, None, None, 2020, 2021)
